@@ -6,6 +6,7 @@ import event.order.OrderEvent;
 import event.order.OrderStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Flux;
@@ -18,6 +19,7 @@ public class EventHandlerConfig {
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerConfig.class);
     private final InventoryService inventoryService;
 
+    @Autowired
     public EventHandlerConfig(InventoryService inventoryService) {
         this.inventoryService = inventoryService;
     }

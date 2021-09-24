@@ -39,12 +39,7 @@ public class InventoryService {
                     i.setAmount(i.getAmount() - 1);
                     return inventoryRepository
                             .save(i)
-                            .then(reservedInventoryRepository.save(ReservedInventory.of(
-                                    orderEvent.getOrder().getOrderId(),
-                                    orderEvent.getOrder().getProductId(),
-                                    1,
-                                    true
-                            )))
+                            .then(reservedInventoryRepository.save(createReservedInventory(orderEvent)))
                             .then(Mono.just(new InventoryEvent(inventoryDto, InventoryStatus.RESERVED)));
                 })
                 .defaultIfEmpty(new InventoryEvent(inventoryDto, InventoryStatus.REJECTED));
@@ -62,5 +57,14 @@ public class InventoryService {
                     .then(reservedInventoryRepository.delete(tuple.getT1()))
                     .then(Mono.empty());
         });
+    }
+
+    private ReservedInventory createReservedInventory(OrderEvent orderEvent) {
+        ReservedInventory reservedInventory = new ReservedInventory();
+        reservedInventory.setOrderId(orderEvent.getOrder().getOrderId());
+        reservedInventory.setProductId(orderEvent.getOrder().getProductId());
+        reservedInventory.setQuantity(1);
+        reservedInventory.setNewEntity(true);
+        return reservedInventory;
     }
 }

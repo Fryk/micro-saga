@@ -11,7 +11,6 @@ import org.springframework.data.relational.core.mapping.Table;
 import java.util.UUID;
 
 @Data
-@AllArgsConstructor(staticName = "of")
 @Table("reserved_inventory")
 public class ReservedInventory implements Persistable<UUID> {
     @Id

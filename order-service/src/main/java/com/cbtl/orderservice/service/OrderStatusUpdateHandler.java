@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Objects;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.*;
 
 @Service
 public class OrderStatusUpdateHandler {
@@ -26,11 +26,11 @@ public class OrderStatusUpdateHandler {
     }
 
     @Transactional
-    public Mono<Order> updateOrder(final UUID orderId, Consumer<Order> consumer){
-        return this.orderRepository
-                .findById(orderId)
+    public Mono<Order> updateOrder(final UUID orderId, BiFunction<OrderRepository, UUID, Mono<Void>> updateFunction){
+        return updateFunction.apply(orderRepository, orderId)
+                .then(this.orderRepository.findById(orderId))
                 .map(order -> {
-                    consumer.andThen(this::updateOrder).accept(order);
+                    this.updateOrder(order);
                     return order;
                 })
                 .flatMap(order -> {
@@ -39,12 +39,10 @@ public class OrderStatusUpdateHandler {
     }
 
     private void updateOrder(Order order) {
-//        if (Objects.isNull(order.getInventoryStatus()) || Objects.isNull(order.getPaymentStatus())) {
-        if (Objects.isNull(order.getInventoryStatus())) {
+        if (Objects.isNull(order.getInventoryStatus()) || Objects.isNull(order.getPaymentStatus())) {
             return;
         }
-        //var isComplete = PaymentStatus.RESERVED.equals(order.getPaymentStatus()) && InventoryStatus.RESERVED.equals(order.getInventoryStatus());
-        var isComplete = InventoryStatus.RESERVED.equals(order.getInventoryStatus());
+        var isComplete = PaymentStatus.RESERVED.equals(order.getPaymentStatus()) && InventoryStatus.RESERVED.equals(order.getInventoryStatus());
         var orderStatus = isComplete ? OrderStatus.ORDER_COMPLETED : OrderStatus.ORDER_CANCELLED;
         order.setOrderStatus(orderStatus);
         if (!isComplete) {
