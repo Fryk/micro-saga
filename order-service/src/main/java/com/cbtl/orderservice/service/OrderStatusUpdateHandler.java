@@ -8,6 +8,7 @@ import event.payment.PaymentStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
 
 import java.util.Objects;
 import java.util.UUID;
@@ -16,25 +17,34 @@ import java.util.function.Consumer;
 @Service
 public class OrderStatusUpdateHandler {
     private final OrderStatusPublisher publisher;
-    private final OrderRepository repository;
+    private final OrderRepository orderRepository;
 
     @Autowired
     public OrderStatusUpdateHandler(OrderStatusPublisher publisher, OrderRepository repository) {
         this.publisher = publisher;
-        this.repository = repository;
+        this.orderRepository = repository;
     }
 
     @Transactional
-    public void updateOrder(final UUID orderId, Consumer<Order> consumer){
-        this.repository.findById(orderId).map(order -> consumer.andThen(this::updateOrder));
-
+    public Mono<Order> updateOrder(final UUID orderId, Consumer<Order> consumer){
+        return this.orderRepository
+                .findById(orderId)
+                .map(order -> {
+                    consumer.andThen(this::updateOrder).accept(order);
+                    return order;
+                })
+                .flatMap(order -> {
+                    return orderRepository.save(order);
+                });
     }
 
     private void updateOrder(Order order) {
-        if (Objects.isNull(order.getInventoryStatus()) || Objects.isNull(order.getPaymentStatus())) {
+//        if (Objects.isNull(order.getInventoryStatus()) || Objects.isNull(order.getPaymentStatus())) {
+        if (Objects.isNull(order.getInventoryStatus())) {
             return;
         }
-        var isComplete = PaymentStatus.RESERVED.equals(order.getPaymentStatus()) && InventoryStatus.RESERVED.equals(order.getInventoryStatus());
+        //var isComplete = PaymentStatus.RESERVED.equals(order.getPaymentStatus()) && InventoryStatus.RESERVED.equals(order.getInventoryStatus());
+        var isComplete = InventoryStatus.RESERVED.equals(order.getInventoryStatus());
         var orderStatus = isComplete ? OrderStatus.ORDER_COMPLETED : OrderStatus.ORDER_CANCELLED;
         order.setOrderStatus(orderStatus);
         if (!isComplete) {

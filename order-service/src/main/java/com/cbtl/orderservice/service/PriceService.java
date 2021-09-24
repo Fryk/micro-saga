@@ -3,6 +3,7 @@ package com.cbtl.orderservice.service;
 import com.cbtl.orderservice.client.PriceClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -17,6 +18,12 @@ public class PriceService {
     }
 
     public final Mono<Integer> getPrice(UUID productId) {
-        return priceClient.getPrice(productId).map(Integer::valueOf);
+        return priceClient.getPrice(productId)
+                .flatMap(value -> {
+                    if (ObjectUtils.isEmpty(value)) {
+                        return Mono.empty();
+                    }
+                    return Mono.just(Integer.valueOf(value));
+                });
     }
 }
